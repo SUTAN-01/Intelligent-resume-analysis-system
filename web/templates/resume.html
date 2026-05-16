@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>智能简历分析系统</title>
+    <link rel="stylesheet" href="/static/app.css"/>
+  </head>
+  <body>
+    <div class="container">
+      <div class="card pad">
+        <div class="row wrap">
+          <div>
+            <div class="muted">AI赋能的智能简历分析系统</div>
+            <h1 style="margin:6px 0 0; font-size:30px"><span class="brand">Resume Analyzer</span></h1>
+            <div class="muted" style="margin-top:10px; max-width:760px">
+              上传PDF简历，快速提取关键信息并与岗位需求进行匹配度分析。
+            </div>
+          </div>
+          <div class="spacer"></div>
+          <div class="row wrap">
+            <a class="btn" href="/">返回首页</a>
+            <a class="btn" href="/docs">API 文档</a>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px" class="grid2">
+        <div class="card pad">
+          <div class="muted" style="margin-bottom:8px">上传简历</div>
+          <input type="file" id="resumeFile" accept=".pdf" class="input" style="margin-bottom:12px"/>
+          
+          <div class="muted" style="margin-bottom:8px">岗位需求（可选，用于匹配度分析）</div>
+          <textarea id="jobDescription" class="input" rows="6" placeholder="请输入岗位描述，包括技能要求、工作经验等..."></textarea>
+          
+          <div style="margin-top:12px">
+            <button id="analyzeBtn" class="btn primary" onclick="analyzeResume()">开始分析</button>
+          </div>
+        </div>
+
+        <div class="card pad">
+          <div class="muted" style="margin-bottom:8px">分析状态</div>
+          <div id="status" class="toast" style="display:none"></div>
+        </div>
+      </div>
+
+      <div id="results" style="margin-top:16px; display:none">
+        <div class="card pad">
+          <h2 style="margin-top:0">分析结果</h2>
+          
+          <div id="matchScore" style="display:none; margin-bottom:20px">
+            <div class="muted" style="margin-bottom:8px">岗位匹配度</div>
+            <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap">
+              <div class="score-card">
+                <div class="score-value" id="overallScore">0</div>
+                <div class="score-label">总体匹配度</div>
+              </div>
+              <div class="score-card">
+                <div class="score-value" id="skillScore">0</div>
+                <div class="score-label">技能匹配</div>
+              </div>
+              <div class="score-card">
+                <div class="score-value" id="experienceScore">0</div>
+                <div class="score-label">经验相关</div>
+              </div>
+              <div class="score-card">
+                <div class="score-value" id="educationScore">0</div>
+                <div class="score-label">学历匹配</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px">
+            <div class="muted" style="margin-bottom:8px">基本信息</div>
+            <div class="info-grid">
+              <div class="info-item"><span class="info-label">姓名：</span><span id="name">-</span></div>
+              <div class="info-item"><span class="info-label">电话：</span><span id="phone">-</span></div>
+              <div class="info-item"><span class="info-label">邮箱：</span><span id="email">-</span></div>
+              <div class="info-item"><span class="info-label">地址：</span><span id="address">-</span></div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px">
+            <div class="muted" style="margin-bottom:8px">求职信息</div>
+            <div class="info-grid">
+              <div class="info-item"><span class="info-label">求职意向：</span><span id="jobIntention">-</span></div>
+              <div class="info-item"><span class="info-label">期望薪资：</span><span id="expectedSalary">-</span></div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px">
+            <div class="muted" style="margin-bottom:8px">背景信息</div>
+            <div class="info-grid">
+              <div class="info-item"><span class="info-label">工作年限：</span><span id="workYears">-</span></div>
+              <div class="info-item"><span class="info-label">学历背景：</span><span id="education">-</span></div>
+            </div>
+            <div style="margin-top:8px">
+              <div class="info-label">项目经历：</div>
+              <div id="projectExperience" style="margin-top:4px">-</div>
+            </div>
+          </div>
+
+          <div id="keywordsSection" style="margin-top:16px; display:none">
+            <div class="muted" style="margin-bottom:8px">关键词分析</div>
+            <div style="margin-bottom:8px">
+              <div class="info-label">匹配关键词：</div>
+              <div id="keywordsMatched" style="margin-top:4px"></div>
+            </div>
+            <div>
+              <div class="info-label">缺失关键词：</div>
+              <div id="missingKeywords" style="margin-top:4px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .info-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:12px;
+      }
+      @media (max-width: 860px){
+        .info-grid{grid-template-columns:1fr}
+      }
+      .info-item{
+        padding:10px;
+        background:rgba(0,0,0,.15);
+        border-radius:10px;
+        border:1px solid var(--border);
+      }
+      .info-label{
+        color:var(--muted);
+        font-size:12px;
+      }
+      .score-card{
+        padding:16px;
+        background:rgba(106,166,255,.12);
+        border-radius:12px;
+        border:1px solid rgba(106,166,255,.35);
+        text-align:center;
+        min-width:120px;
+      }
+      .score-value{
+        font-size:28px;
+        font-weight:800;
+        color:var(--brand);
+      }
+      .score-label{
+        font-size:12px;
+        color:var(--muted);
+        margin-top:4px;
+      }
+      .tag{
+        display:inline-block;
+        padding:4px 10px;
+        margin:4px;
+        border-radius:20px;
+        font-size:12px;
+      }
+      .tag.ok{
+        background:rgba(34,197,94,.15);
+        color:#86efac;
+        border:1px solid rgba(34,197,94,.35);
+      }
+      .tag.missing{
+        background:rgba(239,68,68,.15);
+        color:#fca5a5;
+        border:1px solid rgba(239,68,68,.35);
+      }
+    </style>
+
+    <script>
+      function showStatus(message, isError = false) {
+        const status = document.getElementById('status');
+        status.style.display = 'block';
+        status.className = 'toast ' + (isError ? 'error' : 'ok');
+        status.textContent = message;
+      }
+
+      function setLoading(loading) {
+        const btn = document.getElementById('analyzeBtn');
+        btn.disabled = loading;
+        btn.textContent = loading ? '分析中...' : '开始分析';
+      }
+
+      async function analyzeResume() {
+        const fileInput = document.getElementById('resumeFile');
+        const jobDescription = document.getElementById('jobDescription').value;
+        
+        if (!fileInput.files || fileInput.files.length === 0) {
+          showStatus('请选择要分析的PDF简历', true);
+          return;
+        }
+
+        const file = fileInput.files[0];
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+          showStatus('只支持PDF格式的简历', true);
+          return;
+        }
+
+        setLoading(true);
+        showStatus('正在分析简历，请稍候...');
+        
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          if (jobDescription) {
+            formData.append('job_description', jobDescription);
+          }
+
+          const response = await fetch('/resume/analyze', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error || '分析失败');
+          }
+
+          const result = await response.json();
+          displayResults(result);
+          showStatus('分析完成！');
+        } catch (err) {
+          console.error(err);
+          showStatus('分析失败：' + err.message, true);
+          document.getElementById('results').style.display = 'none';
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function displayResults(result) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.style.display = 'block';
+        
+        const basic = result.resume_info.basic_info;
+        const job = result.resume_info.job_info;
+        const bg = result.resume_info.background_info;
+
+        document.getElementById('name').textContent = basic.name || '-';
+        document.getElementById('phone').textContent = basic.phone || '-';
+        document.getElementById('email').textContent = basic.email || '-';
+        document.getElementById('address').textContent = basic.address || '-';
+        
+        document.getElementById('jobIntention').textContent = job.job_intention || '-';
+        document.getElementById('expectedSalary').textContent = job.expected_salary || '-';
+        
+        document.getElementById('workYears').textContent = bg.work_years || '-';
+        document.getElementById('education').textContent = bg.education || '-';
+        document.getElementById('projectExperience').textContent = bg.project_experience || '-';
+
+        const matchDiv = document.getElementById('matchScore');
+        const keywordsDiv = document.getElementById('keywordsSection');
+        
+        if (result.match_result) {
+          matchDiv.style.display = 'block';
+          keywordsDiv.style.display = 'block';
+          
+          document.getElementById('overallScore').textContent = Math.round(result.match_result.overall_score);
+          document.getElementById('skillScore').textContent = Math.round(result.match_result.skill_match_rate);
+          document.getElementById('experienceScore').textContent = Math.round(result.match_result.experience_relevance);
+          document.getElementById('educationScore').textContent = Math.round(result.match_result.education_match);
+          
+          const matchedHtml = result.match_result.keywords_matched.map(k => 
+            `<span class="tag ok">${k}</span>`
+          ).join('');
+          const missingHtml = result.match_result.missing_keywords.map(k => 
+            `<span class="tag missing">${k}</span>`
+          ).join('');
+          
+          document.getElementById('keywordsMatched').innerHTML = matchedHtml || '<span class="muted">无</span>';
+          document.getElementById('missingKeywords').innerHTML = missingHtml || '<span class="muted">无</span>';
+        } else {
+          matchDiv.style.display = 'none';
+          keywordsDiv.style.display = 'none';
+        }
+      }
+    </script>
+  </body>
+</html>
