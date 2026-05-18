@@ -96,7 +96,7 @@
             </div>
             <div style="margin-top:8px">
               <div class="info-label">项目经历：</div>
-              <div id="projectExperience" style="margin-top:4px">-</div>
+              <div id="projectExperience" class="project-content">-</div>
             </div>
           </div>
 
@@ -169,6 +169,14 @@
         color:#fca5a5;
         border:1px solid rgba(239,68,68,.35);
       }
+      .project-content{
+        padding:10px;
+        background:rgba(0,0,0,.15);
+        border-radius:10px;
+        border:1px solid var(--border);
+        white-space:pre-wrap;
+        line-height:1.5;
+      }
     </style>
 
     <script src="./config.js"></script>
@@ -217,8 +225,8 @@
         try {
           const formData = new FormData();
           formData.append('file', file);
-          if (jobDescription) {
-            formData.append('job_description', jobDescription);
+          if (jobDescription && jobDescription.trim()) {
+            formData.append('job_description', jobDescription.trim());
           }
 
           const response = await fetch(apiUrl('/resume/analyze'), {
@@ -232,10 +240,11 @@
           }
 
           const result = await response.json();
+          console.log('API Response:', result);
           displayResults(result);
           showStatus('分析完成！');
         } catch (err) {
-          console.error(err);
+          console.error('Error:', err);
           showStatus('分析失败：' + err.message, true);
           document.getElementById('results').style.display = 'none';
         } finally {
@@ -247,9 +256,9 @@
         const resultsDiv = document.getElementById('results');
         resultsDiv.style.display = 'block';
         
-        const basic = result.resume_info.basic_info;
-        const job = result.resume_info.job_info;
-        const bg = result.resume_info.background_info;
+        const basic = result.resume_info?.basic_info || {};
+        const job = result.resume_info?.job_info || {};
+        const bg = result.resume_info?.background_info || {};
 
         document.getElementById('name').textContent = basic.name || '-';
         document.getElementById('phone').textContent = basic.phone || '-';
@@ -265,20 +274,24 @@
 
         const matchDiv = document.getElementById('matchScore');
         const keywordsDiv = document.getElementById('keywordsSection');
+        const hasMatchResult = result.match_result && 
+                              (result.match_result.overall_score > 0 || 
+                               result.match_result.keywords_matched?.length > 0 || 
+                               result.match_result.missing_keywords?.length > 0);
         
-        if (result.match_result) {
+        if (hasMatchResult) {
           matchDiv.style.display = 'block';
           keywordsDiv.style.display = 'block';
           
-          document.getElementById('overallScore').textContent = Math.round(result.match_result.overall_score);
-          document.getElementById('skillScore').textContent = Math.round(result.match_result.skill_match_rate);
-          document.getElementById('experienceScore').textContent = Math.round(result.match_result.experience_relevance);
-          document.getElementById('educationScore').textContent = Math.round(result.match_result.education_match);
+          document.getElementById('overallScore').textContent = Math.round(result.match_result.overall_score || 0);
+          document.getElementById('skillScore').textContent = Math.round(result.match_result.skill_match_rate || 0);
+          document.getElementById('experienceScore').textContent = Math.round(result.match_result.experience_relevance || 0);
+          document.getElementById('educationScore').textContent = Math.round(result.match_result.education_match || 0);
           
-          const matchedHtml = result.match_result.keywords_matched.map(k => 
+          const matchedHtml = (result.match_result.keywords_matched || []).map(k => 
             `<span class="tag ok">${k}</span>`
           ).join('');
-          const missingHtml = result.match_result.missing_keywords.map(k => 
+          const missingHtml = (result.match_result.missing_keywords || []).map(k => 
             `<span class="tag missing">${k}</span>`
           ).join('');
           
